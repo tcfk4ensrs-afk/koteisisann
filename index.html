@@ -1,42 +1,243 @@
 <!DOCTYPE html>
-<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>固定資産棚卸しシステム 完成版</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>.m{position:fixed;inset:0;background:rgba(0,0,0,.75)}@media(orientation:landscape){#video{max-height:75vh}}</style></head>
-<body class="bg-slate-100 p-3"><div class="max-w-md mx-auto space-y-3">
-<h1 class="text-xl font-bold">固定資産棚卸しシステム</h1>
-<div class="bg-white p-3 rounded"><div id="reader"></div><div class="flex gap-2 mt-2"><button id="startQR" class="flex-1 bg-blue-600 text-white p-2 rounded">QR開始</button><button id="stopQR" class="flex-1 bg-gray-600 text-white p-2 rounded">停止</button></div></div>
-<div class="bg-white p-3 rounded"><input id="assetNo" class="w-full border p-2" placeholder="資産番号"><div>撮影枚数:<span id="count">0</span></div><button id="shootOpen" class="w-full mt-2 bg-green-600 text-white p-3 rounded">写真撮影</button><button id="nextAsset" class="w-full mt-2 bg-amber-500 text-white p-2 rounded">次の資産へ</button></div>
-<div class="bg-white p-3 rounded"><div id="summary"></div></div>
-<div class="bg-white p-3 rounded"><h3 class="font-bold">履歴</h3><div id="timeline" class="text-xs"></div></div>
-<div class="bg-white p-3 rounded"><h3 class="font-bold">写真一覧</h3><div id="thumbs" class="grid grid-cols-3 gap-2"></div></div>
-<button id="zipBtn" class="w-full p-3 bg-indigo-700 text-white rounded">ZIP出力</button>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>固定資産棚卸しシステム V5</title>
+
+    <!-- Tailwind -->
+    https://cdn.tailwindcss.com
+
+    <!-- QR -->
+    .com/html5-qrcode"></script>
+
+    <!-- ZIP -->
+    https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
+
+    style.css
+</head>
+
+<body class="bg-slate-100 min-h-screen">
+
+<div class="max-w-md mx-auto p-3 space-y-4">
+
+    <!-- ヘッダー -->
+    <section class="bg-white rounded-xl shadow p-3">
+        <h1 class="text-xl font-bold">
+            固定資産棚卸しシステム V5
+        </h1>
+    </section>
+
+    <!-- QR -->
+    <section class="bg-white rounded-xl shadow p-3">
+
+        <h2 class="font-bold mb-2">
+            QRコード読取
+        </h2>
+
+        <div id="qrReader"></div>
+
+        <div class="grid grid-cols-2 gap-2 mt-3">
+
+            <button
+                id="startQrBtn"
+                class="bg-blue-600 text-white rounded p-2"
+            >
+                QR開始
+            </button>
+
+            <button
+                id="stopQrBtn"
+                class="bg-gray-600 text-white rounded p-2"
+            >
+                QR停止
+            </button>
+
+        </div>
+
+    </section>
+
+    <!-- 資産入力 -->
+    <section class="bg-white rounded-xl shadow p-3">
+
+        <h2 class="font-bold mb-2">
+            資産情報
+        </h2>
+
+        <input
+            id="assetNo"
+            type="text"
+            placeholder="資産番号"
+            class="w-full border rounded p-2"
+        >
+
+        <div class="mt-2 text-sm">
+
+            撮影枚数:
+            <span id="assetPhotoCount">
+                0
+            </span>
+
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mt-3">
+
+            <button
+                id="openCameraBtn"
+                class="bg-green-600 text-white rounded p-3"
+            >
+                写真撮影
+            </button>
+
+            <button
+                id="nextAssetBtn"
+                class="bg-orange-500 text-white rounded p-3"
+            >
+                次の資産へ
+            </button>
+
+        </div>
+
+    </section>
+
+    <!-- サマリ -->
+    <section class="bg-white rounded-xl shadow p-3">
+
+        <h2 class="font-bold mb-2">
+            棚卸サマリ
+        </h2>
+
+        <div id="summaryArea">
+        </div>
+
+    </section>
+
+    <!-- 履歴 -->
+    <section class="bg-white rounded-xl shadow p-3">
+
+        <h2 class="font-bold mb-2">
+            履歴
+        </h2>
+
+        <div
+            id="timelineArea"
+            class="space-y-1 text-sm"
+        ></div>
+
+    </section>
+
+    <!-- サムネイル -->
+    <section class="bg-white rounded-xl shadow p-3">
+
+        <h2 class="font-bold mb-2">
+            保存済み写真
+        </h2>
+
+        <div
+            id="thumbnailArea"
+            class="grid grid-cols-3 gap-2"
+        ></div>
+
+    </section>
+
+    <!-- ZIP -->
+    <section>
+
+        <button
+            id="exportZipBtn"
+            class="w-full p-4 bg-indigo-700 text-white rounded-xl font-bold"
+        >
+            棚卸しデータをZIP出力
+        </button>
+
+    </section>
+
 </div>
-<div id="camModal" class="m hidden"><div class="bg-white p-3 m-3 rounded"><video id="video" autoplay playsinline class="w-full"></video><button id="capture" class="w-full p-3 bg-green-600 text-white mt-2">撮影</button></div></div>
-<div id="previewModal" class="m hidden"><div class="bg-white p-3 m-3 rounded"><img id="preview" class="w-full"><div class="flex gap-2 mt-2"><button id="savePhoto" class="flex-1 bg-blue-600 text-white p-2">保存</button><button id="retake" class="flex-1 bg-orange-500 text-white p-2">撮り直し</button></div></div></div>
-<div id="imgModal" class="m hidden flex items-center justify-center"><img id="fullImg" class="max-h-full"></div>
-<script>
-let db,qr,stream,tempBlob,tempThumb,last='',lastTime=0;
-const $=i=>document.getElementById(i);
-const req=indexedDB.open('AssetInventory',1);
-req.onupgradeneeded=e=>e.target.result.createObjectStore('photos',{keyPath:'id',autoIncrement:true});
-req.onsuccess=e=>{db=e.target.result;refresh()};
-function all(){return new Promise(r=>{const q=db.transaction('photos').objectStore('photos').getAll();q.onsuccess=()=>r(q.result);});}
-function add(x){return new Promise(r=>{const t=db.transaction('photos','readwrite');t.objectStore('photos').add(x);t.oncomplete=()=>r();});}
-function del(id){return new Promise(r=>{const t=db.transaction('photos','readwrite');t.objectStore('photos').delete(id);t.oncomplete=()=>r();});}
-async function refresh(){if(!db)return;const rows=await all();const asset=$('assetNo').value.trim();$('count').textContent=rows.filter(x=>x.assetNo===asset).length;$('summary').innerHTML='資産数:'+new Set(rows.map(x=>x.assetNo)).size+' / 写真数:'+rows.length;$('timeline').innerHTML=rows.slice().reverse().map(r=>r.assetNo+' '+r.fileName).join('<br>');$('thumbs').innerHTML=rows.map(r=>`<div><img src="${r.thumb}" class="h-20 w-full object-cover cursor-pointer" onclick="showImg('${r.thumb}')"><button onclick="deletePhoto(${r.id})" class="text-red-600 text-xs">削除</button></div>`).join('');}
-window.showImg=s=>{$('fullImg').src=s;$('imgModal').classList.remove('hidden')};$('imgModal').onclick=()=>$('imgModal').classList.add('hidden');
-window.deletePhoto=async id=>{if(confirm('削除しますか？')){await del(id);refresh();}};
-$('assetNo').oninput=refresh;
-$('shootOpen').onclick=async()=>{if(!$('assetNo').value.trim())return alert('資産番号を入力');$('camModal').classList.remove('hidden');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;};
-$('capture').onclick=async()=>{const c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;c.getContext('2d').drawImage(video,0,0);tempThumb=c.toDataURL('image/jpeg',0.9);tempBlob=await (await fetch(tempThumb)).blob();stream.getTracks().forEach(t=>t.stop());$('camModal').classList.add('hidden');preview.src=tempThumb;$('previewModal').classList.remove('hidden');};
-$('retake').onclick=()=>{$('previewModal').classList.add('hidden');$('shootOpen').click();};
-$('savePhoto').onclick=async()=>{const a=$('assetNo').value.trim();const rows=await all();const seq=rows.filter(x=>x.assetNo===a).length+1;await add({assetNo:a,seq,fileName:`${a}_${seq}.jpg`,thumb:tempThumb,blob:tempBlob,dt:new Date().toISOString()});$('previewModal').classList.add('hidden');refresh();};
-$('nextAsset').onclick=()=>{$('assetNo').value='';refresh();};
-$('startQR').onclick=async()=>{qr=new Html5Qrcode('reader');await qr.start({facingMode:'environment'},{fps:10,qrbox:220},txt=>{let n=Date.now();if(txt===last&&n-lastTime<2000)return;last=txt;lastTime=n;$('assetNo').value=txt;refresh();$('shootOpen').click();});};
-$('stopQR').onclick=async()=>{if(qr){await qr.stop();await qr.clear();qr=null;}};
-$('zipBtn').onclick=async()=>{const rows=await all();const z=new JSZip();const f=z.folder('images');let csv='﻿資産番号,撮影連番,ファイル名,撮影日時
-';rows.forEach(r=>{f.file(r.fileName,r.blob);csv+=`${r.assetNo},${r.seq},${r.fileName},${r.dt}
-`;});z.file('棚卸実績リスト.csv',csv);const b=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='棚卸データ.zip';a.click();};
-</script></body></html>
+
+<!-- ===================================== -->
+<!-- 撮影モーダル -->
+<!-- ===================================== -->
+
+<div
+    id="cameraModal"
+    class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+>
+
+    <div class="bg-white p-3 rounded-xl w-11/12">
+
+        <h2 class="font-bold mb-2">
+            写真撮影
+        </h2>
+
+        <video
+            id="cameraVideo"
+            autoplay
+            playsinline
+            class="w-full rounded"
+        ></video>
+
+        <div class="mt-3">
+
+            <button
+                id="captureBtn"
+                class="w-full bg-green-600 text-white p-3 rounded"
+            >
+                撮影
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===================================== -->
+<!-- プレビューモーダル -->
+<!-- ===================================== -->
+
+<div
+    id="previewModal"
+    class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+>
+
+    <div class="bg-white p-3 rounded-xl w-11/12">
+
+        <h2 class="font-bold mb-2">
+            撮影結果確認
+        </h2>
+
+        <img
+            id="previewImage"
+            class="w-full rounded"
+        >
+
+        <div class="grid grid-cols-2 gap-2 mt-3">
+
+            <button
+                id="saveBtn"
+                class="bg-blue-600 text-white p-3 rounded"
+            >
+                保存
+            </button>
+
+            <button
+                id="retakeBtn"
+                class="bg-orange-500 text-white p-3 rounded"
+            >
+                撮り直し
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+app.js
+
+</body>
+</html>
