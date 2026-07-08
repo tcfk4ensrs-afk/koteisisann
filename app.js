@@ -425,24 +425,56 @@ async function refreshUI() {
     refreshSummary(photos);
     refreshTimeline(photos);
     refreshThumbnails(photos);
+
+    updateCurrentAssetCount(
+        photos
+    );
 }
 
-function refreshSummary(photos) {
+function updateCurrentAssetCount(
+    photos
+) {
+
+    const assetNo =
+        els.assetNo.value.trim();
+
+    const count =
+        photos.filter(
+            p => p.assetNo === assetNo
+        ).length;
+
+    const el =
+        document.getElementById(
+            "assetPhotoCount"
+        );
+
+    if (el) {
+        el.textContent = count;
+    }
+}
+
+function refreshSummary(
+    photos
+) {
 
     const groups = {};
 
     photos.forEach(photo => {
 
-        groups[photo.assetNo] =
-            (groups[photo.assetNo] || 0)
-            + 1;
+        if (!groups[photo.assetNo]) {
+
+            groups[photo.assetNo] = 0;
+        }
+
+        groups[photo.assetNo]++;
+
     });
 
     let html = `
-        <div>
-        総写真数:
-        ${photos.length}
+        <div class="font-bold">
+        総写真数 : ${photos.length}
         </div>
+        <hr class="my-2">
     `;
 
     Object.entries(groups)
@@ -450,29 +482,38 @@ function refreshSummary(photos) {
 
             html += `
                 <div>
-                ${asset}
-                (${count}枚)
+                    ${asset}
+                    (${count}枚)
                 </div>
             `;
+
         });
 
     els.summaryArea.innerHTML =
         html;
 }
 
-function refreshTimeline(photos) {
+function refreshTimeline(
+    photos
+) {
 
     els.timelineArea.innerHTML =
         photos
             .slice()
             .reverse()
-            .map(photo => `
-                <div>
-                ${photo.assetNo}
-                /
-                ${photo.fileName}
-                </div>
-            `)
+            .map(photo => {
+
+                return `
+                    <div class="border-b py-1">
+
+                        ${photo.assetNo}
+                        /
+                        ${photo.fileName}
+
+                    </div>
+                `;
+
+            })
             .join("");
 }
 
@@ -481,45 +522,67 @@ function refreshThumbnails(
 ) {
 
     els.thumbnailArea.innerHTML =
-        photos.map(photo => `
+        photos.map(photo => {
 
-            <div>
+            return `
 
-                ${photo.thumbnail}                    class="w-full rounded cursor-pointer"
-                    onclick="showImage('${photo.thumbnail}')"
+                <div
+                    class="border rounded p-1"
                 >
 
-                <button
-                    class="text-red-600 text-xs"
-                    onclick="removePhoto(${photo.id})"
-                >
-                    削除
-                </button>
+                    ${photo.thumbnail}
 
-            </div>
+                    <div class="text-xs break-all mt-1">
 
-        `).join("");
+                        ${photo.fileName}
+
+                    </div>
+
+                    <button
+                        class="text-red-600 text-xs mt-1"
+                        onclick="removePhoto(${photo.id})"
+                    >
+
+                        削除
+
+                    </button>
+
+                </div>
+            `;
+
+        }).join("");
 }
 
 window.showImage =
 function(dataUrl) {
 
-    window.open(dataUrl);
+    const w =
+        window.open();
+
+    w.document.write(
+        `
+        ${dataUrl}
+        `
+    );
 };
 
 window.removePhoto =
 async function(id) {
 
-    if (
-        !confirm(
+    const result =
+        confirm(
             "削除しますか？"
-        )
-    ) return;
+        );
+
+    if (!result) {
+        return;
+    }
 
     await deletePhotoRecord(id);
 
     await refreshUI();
 };
+
 
 /********************************************************
  * ZIP出力
@@ -530,11 +593,22 @@ async function exportZip() {
     const photos =
         await getAllPhotos();
 
+    if (photos.length === 0) {
+
+        alert(
+            "保存済みデータがありません"
+        );
+
+        return;
+    }
+
     const zip =
         new JSZip();
 
     const imagesFolder =
-        zip.folder("images");
+        zip.folder(
+            "images"
+        );
 
     let csv =
         "\ufeff資産番号,撮影連番,ファイル名,撮影日時\n";
@@ -551,6 +625,7 @@ async function exportZip() {
             `${photo.seq},` +
             `${photo.fileName},` +
             `${photo.capturedAt}\n`;
+
     });
 
     zip.file(
@@ -558,21 +633,23 @@ async function exportZip() {
         csv
     );
 
-    const content =
+    const zipBlob =
         await zip.generateAsync({
             type: "blob"
         });
 
-    const link =
-        document.createElement("a");
-
-    link.href =
-        URL.createObjectURL(
-            content
+    const a =
+        document.createElement(
+            "a"
         );
 
-    link.download =
+    a.href =
+        URL.createObjectURL(
+            zipBlob
+        );
+
+    a.download =
         "棚卸データ.zip";
 
-    link.click();
+    a.click();
 }
