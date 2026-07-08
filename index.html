@@ -551,7 +551,7 @@ async function openCaptureScreen() {
 
 }
     async function captureFromModal() {
-alert("capture");
+      
   const video =
     document.getElementById(
       'captureVideo'
@@ -1010,24 +1010,126 @@ document
     }
 
     function renderHistory() {
-      if (inventoryRecords.length === 0) {
-        els.historyList.innerHTML = '<div class="text-sm text-slate-400 text-center py-6">撮影履歴はまだありません</div>';
-        return;
-      }
 
-      const latestFirst = [...inventoryRecords].slice().reverse();
-      els.historyList.innerHTML = latestFirst.map(r => `
-        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <div class="font-bold text-sm truncate">${escapeHtml(r.assetNo)} <span class="text-blue-700">#${r.seq}</span></div>
-              <div class="text-xs text-slate-500 truncate">${escapeHtml(r.fileName)}</div>
+  if (inventoryRecords.length === 0) {
+
+    els.historyList.innerHTML =
+      '<div class="text-sm text-slate-400 text-center py-6">撮影履歴はまだありません</div>';
+
+    return;
+
+  }
+
+  const latestFirst =
+    [...inventoryRecords]
+    .slice()
+    .reverse();
+
+  els.historyList.innerHTML =
+    latestFirst.map((r,index) => `
+
+      <div
+        class="
+          rounded-lg
+          border
+          border-slate-200
+          bg-slate-50
+          px-3
+          py-2
+        "
+      >
+
+        <div
+          class="
+            flex
+            items-start
+            justify-between
+            gap-2
+          "
+        >
+
+          <div class="min-w-0">
+
+            <div
+              class="
+                font-bold
+                text-sm
+                truncate
+              "
+            >
+              ${escapeHtml(r.assetNo)}
+              <span class="text-blue-700">
+                #${r.seq}
+              </span>
             </div>
-            <div class="text-[11px] text-slate-500 whitespace-nowrap">${escapeHtml(r.datetime)}</div>
+
+            <div
+              class="
+                text-xs
+                text-slate-500
+                truncate
+              "
+            >
+              ${escapeHtml(r.fileName)}
+            </div>
+
+            <div
+              class="
+                text-[11px]
+                text-slate-500
+              "
+            >
+              ${escapeHtml(r.datetime)}
+            </div>
+
           </div>
+
+          <button
+            onclick="deleteRecord(${index})"
+            class="
+              text-red-600
+              text-xs
+              underline
+            "
+          >
+            Delete
+          </button>
+
         </div>
-      `).join('');
-    }
+
+      </div>
+
+    `).join('');
+
+}
+    window.deleteRecord =
+function(index){
+
+  const ok =
+    confirm(
+      'Delete photo ?'
+    );
+
+  if(!ok){
+    return;
+  }
+
+  const actualIndex =
+    inventoryRecords.length - 1 - index;
+
+  inventoryRecords.splice(
+    actualIndex,
+    1
+  );
+
+  imageStore.splice(
+    actualIndex,
+    1
+  );
+
+  updateUi();
+
+};
 
     function setCameraStatus(running) {
       if (running) {
