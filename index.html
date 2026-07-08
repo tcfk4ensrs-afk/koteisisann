@@ -1,1706 +1,512 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>固定資産棚卸しシステム</title>
 
-<meta charset="UTF-8">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-<meta
-    name="viewport"
-    content="width=device-width,initial-scale=1.0"
->
+  <!-- html5-qrcode -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-<title>
+  <!-- JSZip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-固定資産棚卸しシステム V5
-
-</title>
-
-https://cdn.tailwindcss.com</script>
-
-https://unpkg.com/html5-qrcode>
-
-<script srcjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
-
-<style>
-
-html,
-body {
-
-    margin: 0;
-    padding: 0;
-}
-
-.hidden {
-
-    display: none !important;
-}
-
-#reader video {
-
-    border-radius: 12px;
-}
-
-.thumb-image {
-
-    width: 100%;
-    height: 100px;
-
-    object-fit: cover;
-
-    border-radius: 6px;
-
-    cursor: pointer;
-}
-
-.modal {
-
-    position: fixed;
-
-    inset: 0;
-
-    background: rgba(0,0,0,.8);
-
-    z-index: 1000;
-}
-
-.modal-content {
-
-    width: 95%;
-
-    max-width: 800px;
-
-    margin: 20px auto;
-
-    background: white;
-
-    padding: 15px;
-
-    border-radius: 12px;
-}
-
-#video {
-
-    width: 100%;
-    border-radius: 10px;
-}
-
-#previewImage {
-
-    width: 100%;
-    border-radius: 10px;
-}
-
-#imageViewer {
-
-    position: fixed;
-
-    inset: 0;
-
-    background: rgba(0,0,0,.95);
-
-    z-index: 2000;
-
-    display: flex;
-
-    justify-content: center;
-
-    align-items: center;
-}
-
-#imageViewer img {
-
-    max-width: 95vw;
-
-    max-height: 95vh;
-
-    object-fit: contain;
-}
-
-@media (orientation: landscape) {
-
-    #video {
-
-        max-height: 75vh;
-
-        object-fit: contain;
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    #reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+      border-radius: 0.75rem;
     }
-
-    #previewImage {
-
-        max-height: 75vh;
-
-        object-fit: contain;
-    }
-}
-
-</style>
-
+    #reader__scan_region img { display: none; }
+    #reader__dashboard_section { display: none !important; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  </style>
 </head>
 
-<body class="bg-slate-100">
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+  <div class="max-w-md mx-auto min-h-screen bg-white shadow-xl flex flex-col">
 
-<div class="max-w-md mx-auto p-3 space-y-3">
+    <!-- Header -->
+    <header class="bg-slate-900 text-white px-4 py-3">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h1 class="text-lg font-bold leading-tight">固定資産棚卸し</h1>
+          <p class="text-xs text-slate-300">QR読取・写真撮影・CSV/画像Zip出力</p>
+        </div>
+        <div class="text-right text-xs text-slate-300">
+          <div id="assetCountLabel">資産 0</div>
+          <div id="photoCountLabel">写真 0</div>
+        </div>
+      </div>
+    </header>
 
-    <h1 class="text-xl font-bold">
+    <main class="flex-1 px-4 py-3 space-y-3 overflow-y-auto">
 
-        固定資産棚卸しシステム
+      <!-- 注意表示 -->
+      <section id="secureWarning" class="hidden rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        カメラ利用には HTTPS または localhost 環境が必要な場合があります。カメラが起動しない場合は、社内WebサーバーやOneDrive/SharePoint等のHTTPS環境から開いてください。
+      </section>
 
-    </h1>
-
-    <!-- ダッシュボード -->
-
-    <div class="bg-white p-3 rounded shadow">
-
-        <div class="grid grid-cols-2 gap-2">
-
-            <div>
-
-                資産
-
-                <span
-                    id="assetTotal"
-                    class="font-bold"
-                >
-
-                    0
-
-                </span>
-
-            </div>
-
-            <div>
-
-                写真
-
-                <span
-                    id="photoTotal"
-                    class="font-bold"
-                >
-
-                    0
-
-                </span>
-
-            </div>
-
+      <!-- ① カメラエリア -->
+      <section class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-bold text-sm">① カメラ / QRスキャン</h2>
+          <span id="cameraStatus" class="text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700">停止中</span>
         </div>
 
-        <div class="text-xs text-gray-500 mt-2">
-
-            カメラ利用には HTTPS または localhost が必要です
-
-        </div>
-
-    </div>
-
-    <!-- QR -->
-
-    <div class="bg-white p-3 rounded shadow">
-
-        <h2 class="font-bold mb-2">
-
-            ① カメラ / QRスキャン
-
-        </h2>
-
-        <div
-            id="reader"
-            class="mb-2"
-        ></div>
-
-        <div
-            id="cameraStatus"
-            class="text-sm text-gray-500"
-        >
-
-            停止中
-
-        </div>
-
-        <div class="flex gap-2 mt-3">
-
-            <button
-                id="startQr"
-                class="flex-1 bg-blue-600 text-white p-2 rounded"
-            >
-
-                カメラ起動
-
-            </button>
-
-            <button
-                id="stopQr"
-                class="flex-1 bg-gray-600 text-white p-2 rounded"
-            >
-
-                カメラ停止
-
-            </button>
-
-        </div>
-
-    </div>
-
-    <!-- 資産 -->
-
-    <div class="bg-white p-3 rounded shadow">
-
-        <h2 class="font-bold mb-2">
-
-            ② 資産番号入力・撮影
-
-        </h2>
-
-        <input
-            id="assetNo"
-            class="w-full border rounded p-2"
-            placeholder="資産番号"
-        >
-
-        <div class="mt-3">
-
-            この資産の撮影枚数
-
-            <span
-                id="count"
-                class="font-bold"
-            >
-
-                0
-
-            </span>
-
-            枚
-
+        <div id="reader" class="w-full aspect-video bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
+          <div class="text-slate-300 text-sm">カメラ映像</div>
         </div>
 
         <div class="grid grid-cols-2 gap-2 mt-3">
-
-            <button
-                id="takePhoto"
-                class="bg-green-600 text-white p-3 rounded"
-            >
-
-                写真を撮影
-
-            </button>
-
-            <button
-                id="nextAsset"
-                class="bg-orange-500 text-white p-3 rounded"
-            >
-
-                次の資産へ
-
-            </button>
-
+          <button id="startCameraBtn" class="rounded-lg bg-blue-600 text-white py-2.5 font-bold active:scale-[0.99]">
+            カメラ起動
+          </button>
+          <button id="stopCameraBtn" class="rounded-lg bg-slate-600 text-white py-2.5 font-bold active:scale-[0.99]">
+            カメラ停止
+          </button>
         </div>
+      </section>
 
-    </div>
+      <!-- ② 入力・確定エリア -->
+      <section class="rounded-xl border border-slate-200 bg-white p-3">
+        <h2 class="font-bold text-sm mb-2">② 資産番号入力・撮影</h2>
 
-    <!-- 履歴 -->
+        <label for="assetNo" class="block text-xs font-bold text-slate-600 mb-1">資産番号</label>
+        <input id="assetNo" type="text" inputmode="text" autocomplete="off"
+               class="w-full rounded-lg border border-slate-300 px-3 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="QR読取または手入力" />
 
-    <div class="bg-white p-3 rounded shadow">
-
-        <h2 class="font-bold">
-
-            ③ 実績リスト
-
-        </h2>
-
-        <div
-            id="timeline"
-            class="mt-2 text-sm"
-        ></div>
-
-    </div>
-
-    <!-- サムネイル -->
-
-    <div
-        id="photos"
-        class="grid grid-cols-3 gap-2"
-    ></div>
-
-    <!-- 出力 -->
-
-    <div class="bg-white p-3 rounded shadow">
-
-        <h2 class="font-bold mb-2">
-
-            ④ 出力・リセット
-
-        </h2>
-
-        <button
-            id="exportZip"
-            class="w-full bg-indigo-700 text-white p-3 rounded"
-        >
-
-            棚卸しデータを全出力 (Zip)
-
-        </button>
-
-        <button
-            id="resetAll"
-            class="mt-2 text-red-600 underline"
-        >
-
-            全データをリセット
-
-        </button>
-
-    </div>
-
-</div>
-
-<!-- カメラモーダル -->
-
-<div
-    id="cameraModal"
-    class="modal hidden"
->
-
-    <div class="modal-content">
-
-        <video
-            id="video"
-            autoplay
-            playsinline
-        ></video>
-
-        <button
-            id="shutter"
-            class="w-full bg-green-600 text-white p-3 mt-3 rounded"
-        >
-
-            撮影
-
-        </button>
-
-    </div>
-
-</div>
-
-<!-- プレビュー -->
-
-<div
-    id="previewModal"
-    class="modal hidden"
->
-
-    <div class="modal-content">
-
-        <img
-            id="previewImage"
-        >
+        <div class="flex items-center justify-between mt-2 text-sm">
+          <div class="text-slate-600">この資産の撮影枚数</div>
+          <div id="currentAssetPhotoCount" class="font-bold text-lg text-blue-700">0 枚</div>
+        </div>
 
         <div class="grid grid-cols-2 gap-2 mt-3">
-
-            <button
-                id="savePhoto"
-                class="bg-blue-600 text-white p-3 rounded"
-            >
-
-                保存
-
-            </button>
-
-            <button
-                id="retake"
-                class="bg-orange-500 text-white p-3 rounded"
-            >
-
-                撮り直し
-
-            </button>
-
+          <button id="captureBtn" class="rounded-lg bg-emerald-600 text-white py-3 font-bold active:scale-[0.99]">
+            写真を撮影
+          </button>
+          <button id="nextAssetBtn" class="rounded-lg bg-white border border-slate-300 text-slate-800 py-3 font-bold active:scale-[0.99]">
+            次の資産へ
+          </button>
         </div>
 
-    </div>
-
-</div>
-
-<!-- 拡大表示 -->
-
-<div
-    id="imageViewer"
-    class="hidden"
->
-
-    <img id="viewerImage">
-
-</div>
-
-<script>
-
-/************************************************
- V5 Part1
- 基本設定
- IndexedDB
-************************************************/
-
-const DB_NAME = "AssetInventoryDB";
-const DB_VERSION = 1;
-const STORE_NAME = "photos";
-
-let db = null;
-
-let qr = null;
-
-let stream = null;
-
-let tempBlob = null;
-
-let tempImg = "";
-
-let lastQr = "";
-let lastQrTime = 0;
-  /************************************************
- V5 Part2
- IndexedDB
- QR
- 起動処理
- refresh
-************************************************/
-
-/***********************************************
- * IndexedDB 初期化
-***********************************************/
-
-async function initDB() {
-
-    return new Promise((resolve, reject) => {
-
-        const request =
-            indexedDB.open(
-                DB_NAME,
-                DB_VERSION
-            );
-
-        request.onupgradeneeded =
-            (event) => {
-
-                const database =
-                    event.target.result;
-
-                if (
-                    !database.objectStoreNames.contains(
-                        STORE_NAME
-                    )
-                ) {
-
-                    database.createObjectStore(
-                        STORE_NAME,
-                        {
-                            keyPath: "id",
-                            autoIncrement: true
-                        }
-                    );
-
-                }
-
-            };
-
-        request.onsuccess =
-            (event) => {
-
-                db =
-                    event.target.result;
-
-                resolve();
-
-            };
-
-        request.onerror =
-            () => {
-
-                reject(
-                    request.error
-                );
-
-            };
-
-    });
-
-}
-
-/***********************************************
- * DB保存
-***********************************************/
-
-async function savePhotoToDB(
-    photo
-) {
-
-    return new Promise((resolve, reject) => {
-
-        const tx =
-            db.transaction(
-                STORE_NAME,
-                "readwrite"
-            );
-
-        const store =
-            tx.objectStore(
-                STORE_NAME
-            );
-
-        const req =
-            store.add(
-                photo
-            );
-
-        req.onsuccess =
-            () => resolve();
-
-        req.onerror =
-            () => reject(
-                req.error
-            );
-
-    });
-
-}
-
-/***********************************************
- * DB全件取得
-***********************************************/
-
-async function loadPhotosFromDB() {
-
-    return new Promise((resolve, reject) => {
-
-        const tx =
-            db.transaction(
-                STORE_NAME,
-                "readonly"
-            );
-
-        const store =
-            tx.objectStore(
-                STORE_NAME
-            );
-
-        const req =
-            store.getAll();
-
-        req.onsuccess =
-            () => resolve(
-                req.result
-            );
-
-        req.onerror =
-            () => reject(
-                req.error
-            );
-
-    });
-
-}
-
-/***********************************************
- * DB削除
-***********************************************/
-
-async function deletePhotoFromDB(
-    id
-) {
-
-    return new Promise((resolve, reject) => {
-
-        const tx =
-            db.transaction(
-                STORE_NAME,
-                "readwrite"
-            );
-
-        const store =
-            tx.objectStore(
-                STORE_NAME
-            );
-
-        const req =
-            store.delete(
-                id
-            );
-
-        req.onsuccess =
-            () => resolve();
-
-        req.onerror =
-            () => reject(
-                req.error
-            );
-
-    });
-
-}
-
-/***********************************************
- * DB全削除
-***********************************************/
-
-async function clearDB() {
-
-    return new Promise((resolve, reject) => {
-
-        const tx =
-            db.transaction(
-                STORE_NAME,
-                "readwrite"
-            );
-
-        const store =
-            tx.objectStore(
-                STORE_NAME
-            );
-
-        const req =
-            store.clear();
-
-        req.onsuccess =
-            () => resolve();
-
-        req.onerror =
-            () => reject(
-                req.error
-            );
-
-    });
-
-}
-
-/***********************************************
- * QR開始
-***********************************************/
-
-async function startQR() {
-
-    if (qr) {
-
-        return;
-
-    }
-
-    try {
-
-        qr =
-            new Html5Qrcode(
-                "reader"
-            );
-
-        await qr.start(
-            {
-                facingMode:
-                    "environment"
-            },
-            {
-                fps: 10,
-                qrbox: 220
-            },
-            onQRDetected
-        );
-
-        document
-            .getElementById(
-                "cameraStatus"
-            )
-            .innerText =
-            "スキャン中";
-
-    }
-    catch (err) {
-
-        console.error(err);
-
-        alert(
-            "QRカメラを起動できません"
-        );
-
-    }
-
-}
-
-/***********************************************
- * QR検出
-***********************************************/
-
-function onQRDetected(
-    qrText
-) {
-
-    const now =
-        Date.now();
-
-    if (
-        qrText === lastQr &&
-        now - lastQrTime < 2000
-    ) {
-
-        return;
-
-    }
-
-    lastQr =
-        qrText;
-
-    lastQrTime =
-        now;
-
-    document
-        .getElementById(
-            "assetNo"
-        )
-        .value =
-        qrText;
-
-    refresh();
-
-    openCamera();
-
-}
-
-/***********************************************
- * QR停止
-***********************************************/
-
-async function stopQR() {
-
-    if (!qr) {
-
-        return;
-
-    }
-
-    try {
-
-        await qr.stop();
-
-        await qr.clear();
-
-    }
-    catch (err) {
-
-        console.error(err);
-
-    }
-
-    qr = null;
-
-    document
-        .getElementById(
-            "cameraStatus"
-        )
-        .innerText =
-        "停止中";
-
-}
-
-/***********************************************
- * 画面更新
-***********************************************/
-
-async function refresh() {
-
-    const photos =
-        await loadPhotosFromDB();
-
-    const currentAsset =
-        document
-            .getElementById(
-                "assetNo"
-            )
-            .value
-            .trim();
-
-    document
-        .getElementById(
-            "assetTotal"
-        )
-        .innerText =
-        new Set(
-            photos.map(
-                p => p.assetNo
-            )
-        ).size;
-
-    document
-        .getElementById(
-            "photoTotal"
-        )
-        .innerText =
-        photos.length;
-
-    const currentCount =
-        photos.filter(
-            p =>
-                p.assetNo ===
-                currentAsset
-        ).length;
-
-    document
-        .getElementById(
-            "count"
-        )
-        .innerText =
-        currentCount;
-
-}
-
-/***********************************************
- * 画面イベント
-***********************************************/
-
-function wireEvents() {
-
-    document
-        .getElementById(
-            "startQr"
-        )
-        .addEventListener(
-            "click",
-            startQR
-        );
-
-    document
-        .getElementById(
-            "stopQr"
-        )
-        .addEventListener(
-            "click",
-            stopQR
-        );
-
-}
-  /************************************************
- V5 Part3
- カメラ
- 撮影
- プレビュー
- 保存
-************************************************/
-
-/***********************************************
- * カメラ起動
-***********************************************/
-
-async function openCamera() {
-
-    const assetNo =
-        document
-            .getElementById(
-                "assetNo"
-            )
-            .value
-            .trim();
-
-    if (!assetNo) {
-
-        alert(
-            "資産番号を入力してください"
-        );
-
-        return;
-    }
-
-    try {
-
-        document
-            .getElementById(
-                "cameraModal"
-            )
-            .classList
-            .remove(
-                "hidden"
-            );
-
-        stream =
-            await navigator
-                .mediaDevices
-                .getUserMedia({
-
-                    video: {
-
-                        facingMode: {
-                            ideal:
-                                "environment"
-                        },
-
-                        width: {
-                            ideal:
-                                1920
-                        },
-
-                        height: {
-                            ideal:
-                                1080
-                        }
-
-                    }
-
-                });
-
-        document
-            .getElementById(
-                "video"
-            )
-            .srcObject =
-            stream;
-
-    }
-    catch (err) {
-
-        console.error(err);
-
-        alert(
-            "カメラを起動できません"
-        );
-
-    }
-
-}
-
-/***********************************************
- * カメラ停止
-***********************************************/
-
-function stopCamera() {
-
-    if (stream) {
-
-        stream
-            .getTracks()
-            .forEach(track => {
-
-                track.stop();
-
-            });
-
-        stream = null;
-
-    }
-
-    document
-        .getElementById(
-            "cameraModal"
-        )
-        .classList
-        .add(
-            "hidden"
-        );
-
-}
-
-/***********************************************
- * シャッター
-***********************************************/
-
-async function capturePhoto() {
-
-    const video =
-        document.getElementById(
-            "video"
-        );
-
-    const canvas =
-        document.createElement(
-            "canvas"
-        );
-
-    canvas.width =
-        video.videoWidth;
-
-    canvas.height =
-        video.videoHeight;
-
-    const ctx =
-        canvas.getContext(
-            "2d"
-        );
-
-    ctx.drawImage(
-        video,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    tempImg =
-        canvas.toDataURL(
-            "image/jpeg",
-            0.9
-        );
-
-    tempBlob =
-        await (
-            await fetch(
-                tempImg
-            )
-        ).blob();
-
-    stopCamera();
-
-    document
-        .getElementById(
-            "previewImage"
-        )
-        .src =
-        tempImg;
-
-    document
-        .getElementById(
-            "previewModal"
-        )
-        .classList
-        .remove(
-            "hidden"
-        );
-
-}
-
-/***********************************************
- * 撮り直し
-***********************************************/
-
-function retakePhoto() {
-
-    document
-        .getElementById(
-            "previewModal"
-        )
-        .classList
-        .add(
-            "hidden"
-        );
-
-    openCamera();
-
-}
-
-/***********************************************
- * 保存
-***********************************************/
-
-async function savePhoto() {
-
-    const assetNo =
-        document
-            .getElementById(
-                "assetNo"
-            )
-            .value
-            .trim();
-
-    const photos =
-        await loadPhotosFromDB();
-
-    const seq =
-        photos.filter(
-            p =>
-                p.assetNo === assetNo
-        ).length + 1;
-
-    const fileName =
-        `${assetNo}_${seq}.jpg`;
-
-    const record = {
-
-        assetNo:
-            assetNo,
-
-        seq:
-            seq,
-
-        fileName:
-            fileName,
-
-        blob:
-            tempBlob,
-
-        thumbnail:
-            tempImg,
-
-        capturedAt:
-            new Date()
-                .toISOString()
-
+        <div id="message" class="mt-3 hidden rounded-lg px-3 py-2 text-sm"></div>
+      </section>
+
+      <!-- ③ 実績リストエリア -->
+      <section class="rounded-xl border border-slate-200 bg-white p-3">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-bold text-sm">③ 実績リスト</h2>
+          <span id="recordCount" class="text-xs text-slate-500">0件</span>
+        </div>
+        <div id="historyList" class="space-y-2 max-h-48 overflow-y-auto">
+          <div class="text-sm text-slate-400 text-center py-6">撮影履歴はまだありません</div>
+        </div>
+      </section>
+
+      <!-- ④ アクションエリア -->
+      <section class="rounded-xl border border-slate-200 bg-slate-50 p-3 safe-bottom">
+        <h2 class="font-bold text-sm mb-2">④ 出力・リセット</h2>
+        <button id="exportZipBtn" class="w-full rounded-lg bg-indigo-700 text-white py-3 font-bold active:scale-[0.99] disabled:bg-slate-400">
+          棚卸しデータを全出力 (Zip)
+        </button>
+        <button id="resetBtn" class="w-full mt-2 text-sm text-red-600 underline py-2">
+          全データをリセット
+        </button>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ==========================================
+    // 固定資産棚卸しシステム - 完全クライアントサイド版
+    // ==========================================
+
+    let html5QrCode = null;
+    let isCameraRunning = false;
+
+    // 棚卸しデータはブラウザメモリ上のみ保持する
+    let inventoryRecords = []; // { assetNo, seq, fileName, datetime }
+    let imageStore = [];       // { assetNo, seq, fileName, blob, datetime }
+    let assetCounters = {};    // { [assetNo]: count }
+
+    const readerId = 'reader';
+
+    const els = {
+      secureWarning: document.getElementById('secureWarning'),
+      cameraStatus: document.getElementById('cameraStatus'),
+      startCameraBtn: document.getElementById('startCameraBtn'),
+      stopCameraBtn: document.getElementById('stopCameraBtn'),
+      assetNo: document.getElementById('assetNo'),
+      currentAssetPhotoCount: document.getElementById('currentAssetPhotoCount'),
+      captureBtn: document.getElementById('captureBtn'),
+      nextAssetBtn: document.getElementById('nextAssetBtn'),
+      message: document.getElementById('message'),
+      historyList: document.getElementById('historyList'),
+      recordCount: document.getElementById('recordCount'),
+      assetCountLabel: document.getElementById('assetCountLabel'),
+      photoCountLabel: document.getElementById('photoCountLabel'),
+      exportZipBtn: document.getElementById('exportZipBtn'),
+      resetBtn: document.getElementById('resetBtn'),
     };
 
-    await savePhotoToDB(
-        record
-    );
+    init();
 
-    document
-        .getElementById(
-            "previewModal"
-        )
-        .classList
-        .add(
-            "hidden"
-        );
-
-    await refresh();
-
-    const again =
-        confirm(
-            "保存しました。\nもう1枚撮影しますか？"
-        );
-
-    if (again) {
-
-        openCamera();
-
+    function init() {
+      if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        els.secureWarning.classList.remove('hidden');
+      }
+      bindEvents();
+      updateUi();
     }
-    else {
 
-        const next =
-            confirm(
-                "次の資産へ移動しますか？"
-            );
+    function bindEvents() {
+      els.startCameraBtn.addEventListener('click', startCamera);
+      els.stopCameraBtn.addEventListener('click', stopCamera);
+      els.captureBtn.addEventListener('click', capturePhoto);
+      els.nextAssetBtn.addEventListener('click', nextAsset);
+      els.exportZipBtn.addEventListener('click', exportZip);
+      els.resetBtn.addEventListener('click', resetAllData);
+      els.assetNo.addEventListener('input', updateCurrentAssetCount);
+    }
 
-        if (next) {
+    async function startCamera() {
+      if (isCameraRunning) {
+        showMessage('カメラはすでに起動しています。', 'info');
+        return;
+      }
 
-            document
-                .getElementById(
-                    "assetNo"
-                )
-                .value = "";
+      if (!window.Html5Qrcode) {
+        showMessage('html5-qrcodeライブラリを読み込めません。ネットワーク/CDN接続を確認してください。', 'error');
+        return;
+      }
 
-            refresh();
+      try {
+        // reader内を初期化
+        document.getElementById(readerId).innerHTML = '';
+        html5QrCode = new Html5Qrcode(readerId);
+
+        const config = {
+          fps: 10,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minEdge * 0.75);
+            return { width: size, height: size };
+          },
+          aspectRatio: 1.7777778,
+          disableFlip: false
+        };
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          config,
+          onQrSuccess,
+          onQrFailure
+        );
+
+        isCameraRunning = true;
+        setCameraStatus(true);
+        showMessage('カメラを起動しました。QRコードを読み取れます。', 'success');
+      } catch (err) {
+        console.error(err);
+        isCameraRunning = false;
+        setCameraStatus(false);
+        showMessage('カメラ起動に失敗しました。権限、HTTPS環境、他アプリのカメラ使用状況を確認してください。', 'error');
+      }
+    }
+
+    async function stopCamera() {
+      if (!html5QrCode || !isCameraRunning) {
+        setCameraStatus(false);
+        showMessage('カメラは停止中です。', 'info');
+        return;
+      }
+
+      try {
+        await html5QrCode.stop();
+        await html5QrCode.clear();
+      } catch (err) {
+        console.warn(err);
+      } finally {
+        html5QrCode = null;
+        isCameraRunning = false;
+        setCameraStatus(false);
+        document.getElementById(readerId).innerHTML = '<div class="text-slate-300 text-sm flex items-center justify-center h-full">カメラ映像</div>';
+        showMessage('カメラを停止しました。', 'info');
+      }
+    }
+
+    function onQrSuccess(decodedText) {
+      const value = String(decodedText || '').trim();
+      if (!value) return;
+
+      const before = els.assetNo.value.trim();
+      els.assetNo.value = value;
+      updateCurrentAssetCount();
+
+      if (before !== value) {
+        showMessage(`QR読取: ${value}`, 'success');
+      }
+    }
+
+    function onQrFailure(_error) {
+      // リアルタイムスキャンでは失敗が頻発するため、画面表示しない
+    }
+
+    async function capturePhoto() {
+      const assetNo = els.assetNo.value.trim();
+      if (!assetNo) {
+        showMessage('資産番号を入力またはQR読取してください。', 'error');
+        els.assetNo.focus();
+        return;
+      }
+
+      const video = document.querySelector(`#${readerId} video`);
+      if (!video || video.readyState < 2) {
+        showMessage('カメラ映像が取得できません。先にカメラを起動してください。', 'error');
+        return;
+      }
+
+      try {
+        const canvas = document.createElement('canvas');
+        const width = video.videoWidth || video.clientWidth;
+        const height = video.videoHeight || video.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, width, height);
+
+        const blob = await canvasToBlob(canvas, 'image/jpeg', 0.9);
+        if (!blob) throw new Error('画像Blob生成に失敗しました。');
+
+        const seq = (assetCounters[assetNo] || 0) + 1;
+        assetCounters[assetNo] = seq;
+
+        const safeName = sanitizeFilePart(assetNo);
+        const fileName = `${safeName}_${seq}.jpg`;
+        const datetime = formatDateTime(new Date());
+
+        imageStore.push({ assetNo, seq, fileName, blob, datetime });
+        inventoryRecords.push({ assetNo, seq, fileName, datetime });
+
+        updateUi();
+        showMessage(`撮影保存しました：${fileName}`, 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage('写真の撮影保存に失敗しました。', 'error');
+      }
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    }
+
+    function nextAsset() {
+      els.assetNo.value = '';
+      updateCurrentAssetCount();
+      els.assetNo.focus();
+      showMessage('次の資産を入力またはスキャンしてください。', 'info');
+    }
+
+    async function exportZip() {
+      if (inventoryRecords.length === 0 || imageStore.length === 0) {
+        showMessage('出力対象データがありません。', 'error');
+        return;
+      }
+
+      if (!window.JSZip) {
+        showMessage('JSZipライブラリを読み込めません。ネットワーク/CDN接続を確認してください。', 'error');
+        return;
+      }
+
+      try {
+        els.exportZipBtn.disabled = true;
+        els.exportZipBtn.textContent = 'Zip作成中...';
+
+        const zip = new JSZip();
+        const imageFolder = zip.folder('images');
+
+        // CSV生成（Excel文字化け対策としてUTF-8 BOM付き）
+        const csv = createCsv(inventoryRecords);
+        zip.file('棚卸実績リスト.csv', csv);
+
+        for (const img of imageStore) {
+          imageFolder.file(img.fileName, img.blob);
         }
 
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const today = formatDate(new Date());
+        const zipName = `棚卸データ_${today}.zip`;
+
+        downloadBlob(zipBlob, zipName);
+        showMessage(`Zip出力しました：${zipName}`, 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage('Zip出力に失敗しました。', 'error');
+      } finally {
+        els.exportZipBtn.disabled = false;
+        els.exportZipBtn.textContent = '棚卸しデータを全出力 (Zip)';
+      }
     }
 
-}
+    function createCsv(records) {
+      const header = ['資産番号', '撮影連番', 'ファイル名', '撮影日時'];
+      const rows = records.map(r => [r.assetNo, r.seq, r.fileName, r.datetime]);
+      const csvText = [header, ...rows]
+        .map(row => row.map(csvEscape).join(','))
+        .join('\r\n');
+      return '\uFEFF' + csvText; // BOM付きUTF-8
+    }
 
-/***********************************************
- * 次の資産へ
-***********************************************/
+    function csvEscape(value) {
+      const str = String(value ?? '');
+      if (/[",\r\n]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
 
-function moveNextAsset() {
+    function downloadBlob(blob, fileName) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 
-    document
-        .getElementById(
-            "assetNo"
-        )
-        .value = "";
-
-    refresh();
-
-}
-
-/***********************************************
- * カメライベント登録
-***********************************************/
-
-document
-    .getElementById(
-        "takePhoto"
-    )
-    .addEventListener(
-        "click",
-        openCamera
-    );
-
-document
-    .getElementById(
-        "shutter"
-    )
-    .addEventListener(
-        "click",
-        capturePhoto
-    );
-
-document
-    .getElementById(
-        "retake"
-    )
-    .addEventListener(
-        "click",
-        retakePhoto
-    );
-
-document
-    .getElementById(
-        "savePhoto"
-    )
-    .addEventListener(
-        "click",
-        savePhoto
-    );
-
-document
-    .getElementById(
-        "nextAsset"
-    )
-    .addEventListener(
-        "click",
-        moveNextAsset
-    );
-  /************************************************
- V5 Part4
- サムネイル
- 実績リスト
- ZIP出力
- 初期化
-************************************************/
-
-/***********************************************
- * 実績リスト
-***********************************************/
-
-async function renderTimeline() {
-
-    const photos =
-        await loadPhotosFromDB();
-
-    const timeline =
-        document.getElementById(
-            "timeline"
-        );
-
-    if (
-        photos.length === 0
-    ) {
-
-        timeline.innerHTML =
-            `
-            <div class="text-gray-500">
-
-                撮影履歴はまだありません
-
-            </div>
-            `;
-
+    function resetAllData() {
+      if (inventoryRecords.length === 0 && imageStore.length === 0) {
+        showMessage('リセット対象データはありません。', 'info');
         return;
+      }
+
+      const ok = confirm('メモリ内の棚卸し実績と写真データをすべて削除します。よろしいですか？');
+      if (!ok) return;
+
+      inventoryRecords = [];
+      imageStore = [];
+      assetCounters = {};
+      els.assetNo.value = '';
+      updateUi();
+      showMessage('全データをリセットしました。', 'info');
     }
 
-    timeline.innerHTML =
-        photos
-        .slice()
-        .reverse()
-        .map(photo => {
+    function updateUi() {
+      updateCurrentAssetCount();
+      renderHistory();
 
-            return `
+      const uniqueAssets = new Set(inventoryRecords.map(r => r.assetNo));
+      els.assetCountLabel.textContent = `資産 ${uniqueAssets.size}`;
+      els.photoCountLabel.textContent = `写真 ${imageStore.length}`;
+      els.recordCount.textContent = `${inventoryRecords.length}件`;
+      els.exportZipBtn.disabled = inventoryRecords.length === 0;
+    }
 
-            <div
-                class="
-                border-b
-                py-2
-                text-sm
-                "
-            >
+    function updateCurrentAssetCount() {
+      const assetNo = els.assetNo.value.trim();
+      const count = assetNo ? (assetCounters[assetNo] || 0) : 0;
+      els.currentAssetPhotoCount.textContent = `${count} 枚`;
+    }
 
-                <div>
-
-                    ${photo.assetNo}
-
-                </div>
-
-                <div>
-
-                    ${photo.fileName}
-
-                </div>
-
-                <div class="text-xs text-gray-500">
-
-                    ${formatDate(
-                        photo.capturedAt
-                    )}
-
-                </div>
-
-            </div>
-
-            `;
-
-        })
-        .join("");
-
-}
-
-/***********************************************
- * 写真一覧
-***********************************************/
-
-async function renderPhotos() {
-
-    const photos =
-        await loadPhotosFromDB();
-
-    const area =
-        document.getElementById(
-            "photos"
-        );
-
-    area.innerHTML =
-        photos
-        .map(photo => {
-
-            return `
-
-            <div
-                class="
-                bg-white
-                rounded
-                shadow
-                p-1
-                "
-            >
-
-                                    }"
-
-                    class="
-                    thumb-image
-                    "
-
-                    onclick="
-                        showImage(
-                            '${photo.thumbnail}'
-                        )
-                    "
-                >
-
-                <div
-                    class="
-                    text-xs
-                    break-all
-                    mt-1
-                    "
-                >
-
-                    ${photo.fileName}
-
-                </div>
-
-                <button
-
-                    onclick="
-                        removePhoto(
-                            ${photo.id}
-                        )
-                    "
-
-                    class="
-                        text-red-600
-                        text-xs
-                        mt-1
-                    "
-
-                >
-
-                    削除
-
-                </button>
-
-            </div>
-
-            `;
-
-        })
-        .join("");
-
-}
-
-/***********************************************
- * 写真拡大
-***********************************************/
-
-function showImage(
-    src
-) {
-
-    document
-        .getElementById(
-            "viewerImage"
-        )
-        .src =
-        src;
-
-    document
-        .getElementById(
-            "imageViewer"
-        )
-        .classList
-        .remove(
-            "hidden"
-        );
-
-}
-
-document
-    .getElementById(
-        "imageViewer"
-    )
-    .addEventListener(
-        "click",
-        () => {
-
-            document
-                .getElementById(
-                    "imageViewer"
-                )
-                .classList
-                .add(
-                    "hidden"
-                );
-
-        }
-    );
-
-/***********************************************
- * 写真削除
-***********************************************/
-
-async function removePhoto(
-    id
-) {
-
-    const result =
-        confirm(
-            "写真を削除しますか？"
-        );
-
-    if (!result) {
-
+    function renderHistory() {
+      if (inventoryRecords.length === 0) {
+        els.historyList.innerHTML = '<div class="text-sm text-slate-400 text-center py-6">撮影履歴はまだありません</div>';
         return;
+      }
+
+      const latestFirst = [...inventoryRecords].slice().reverse();
+      els.historyList.innerHTML = latestFirst.map(r => `
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-bold text-sm truncate">${escapeHtml(r.assetNo)} <span class="text-blue-700">#${r.seq}</span></div>
+              <div class="text-xs text-slate-500 truncate">${escapeHtml(r.fileName)}</div>
+            </div>
+            <div class="text-[11px] text-slate-500 whitespace-nowrap">${escapeHtml(r.datetime)}</div>
+          </div>
+        </div>
+      `).join('');
     }
 
-    await deletePhotoFromDB(
-        id
-    );
+    function setCameraStatus(running) {
+      if (running) {
+        els.cameraStatus.textContent = '起動中';
+        els.cameraStatus.className = 'text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700';
+      } else {
+        els.cameraStatus.textContent = '停止中';
+        els.cameraStatus.className = 'text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700';
+      }
+    }
 
-    await refresh();
+    function showMessage(text, type) {
+      const base = 'mt-3 rounded-lg px-3 py-2 text-sm';
+      const styles = {
+        success: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+        error: 'bg-red-50 text-red-800 border border-red-200',
+        info: 'bg-blue-50 text-blue-800 border border-blue-200'
+      };
+      els.message.className = `${base} ${styles[type] || styles.info}`;
+      els.message.textContent = text;
+      els.message.classList.remove('hidden');
 
-    await renderTimeline();
+      clearTimeout(showMessage._timer);
+      showMessage._timer = setTimeout(() => {
+        els.message.classList.add('hidden');
+      }, 4500);
+    }
 
-    await renderPhotos();
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}${m}${d}`;
+    }
 
-}
+    function formatDateTime(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+    }
 
-/***********************************************
- * CSV生成
-***********************************************/
+    function sanitizeFilePart(value) {
+      // Windows / macOSで問題になりやすいファイル名文字を置換
+      return String(value)
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, '_')
+        .slice(0, 80) || 'asset';
+    }
 
-function createCSV(
-    photos
-) {
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
-    let csv =
-        "\ufeff資産番号,撮影連番,ファイル名,撮影日時\n";
-
-    photos.forEach(photo => {
-
-        csv +=
-            `${photo.assetNo},` +
-            `${photo.seq},` +
-            `${photo.fileName},` +
-            `${photo.capturedAt}\n`;
-
+    // 画面離脱時の注意喚起（メモリ保持のため）
+    window.addEventListener('beforeunload', (e) => {
+      if (inventoryRecords.length > 0 || imageStore.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     });
-
-    return csv;
-
-}
-
-/***********************************************
- * ZIP出力
-***********************************************/
-
-async function exportZIP() {
-
-    const photos =
-        await loadPhotosFromDB();
-
-    if (
-        photos.length === 0
-    ) {
-
-        alert(
-            "出力対象がありません"
-        );
-
-        return;
-    }
-
-    const zip =
-        new JSZip();
-
-    const images =
-        zip.folder(
-            "images"
-        );
-
-    photos.forEach(photo => {
-
-        images.file(
-            photo.fileName,
-            photo.blob
-        );
-
-    });
-
-    zip.file(
-        "棚卸実績リスト.csv",
-        createCSV(
-            photos
-        )
-    );
-
-    const blob =
-        await zip.generateAsync({
-            type:"blob"
-        });
-
-    const link =
-        document.createElement(
-            "a"
-        );
-
-    link.href =
-        URL.createObjectURL(
-            blob
-        );
-
-    const now =
-        new Date();
-
-    const y =
-        now.getFullYear();
-
-    const m =
-        String(
-            now.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        );
-
-    const d =
-        String(
-            now.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
-
-    link.download =
-        `棚卸データ_${y}${m}${d}.zip`;
-
-    link.click();
-
-}
-
-/***********************************************
- * リセット
-***********************************************/
-
-async function resetAllData() {
-
-    const result =
-        confirm(
-            "全データを削除しますか？"
-        );
-
-    if (!result) {
-
-        return;
-    }
-
-    await clearDB();
-
-    await refresh();
-
-    await renderTimeline();
-
-    await renderPhotos();
-
-}
-
-document
-    .getElementById(
-        "resetAll"
-    )
-    .addEventListener(
-        "click",
-        resetAllData
-    );
-
-/***********************************************
- * 日時整形
-***********************************************/
-
-function formatDate(
-    value
-) {
-
-    const d =
-        new Date(
-            value
-        );
-
-    return d.toLocaleString(
-        "ja-JP"
-    );
-
-}
-
-/***********************************************
- * 起動処理
-***********************************************/
-
-document
-.addEventListener(
-    "DOMContentLoaded",
-    async () => {
-
-        try {
-
-            await initDB();
-
-            wireEvents();
-
-            await refresh();
-
-            await renderTimeline();
-
-            await renderPhotos();
-
-        }
-        catch(err) {
-
-            console.error(
-                err
-            );
-
-            alert(
-                "初期化エラー\n" +
-                err.message
-            );
-
-        }
-
-    }
-);
-
-/***********************************************
- * ZIPボタン
-***********************************************/
-
-document
-    .getElementById(
-        "exportZip"
-    )
-    .addEventListener(
-        "click",
-        exportZIP
-    );
-
-</script>
-
+  </script>
 </body>
 </html>
