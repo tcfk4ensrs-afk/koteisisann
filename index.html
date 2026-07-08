@@ -528,6 +528,28 @@ async function openCaptureScreen() {
   }
 
 }
+    function closeCaptureScreen() {
+
+  if (captureStream) {
+
+    captureStream
+      .getTracks()
+      .forEach(track => track.stop());
+
+    captureStream = null;
+
+  }
+
+  document
+    .getElementById(
+      'captureModal'
+    )
+    .classList
+    .add(
+      'hidden'
+    );
+
+}
     async function captureFromModal() {
 alert("capture");
   const video =
