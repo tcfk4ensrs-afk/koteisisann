@@ -1,21 +1,16 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>固定資産棚卸しシステム V5</title>
 
-    <!-- Tailwind -->
     https://cdn.tailwindcss.com
 
-    <!-- QR -->
-    .com/html5-qrcode"></script>
+    <ttps://unpkg.com/html5-qrcode>
 
-    <!-- ZIP -->
     https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
 
     style.css
@@ -23,221 +18,227 @@
 
 <body class="bg-slate-100 min-h-screen">
 
-<div class="max-w-md mx-auto p-3 space-y-4">
+    <div class="max-w-md mx-auto p-3 space-y-4">
 
-    <!-- ヘッダー -->
-    <section class="bg-white rounded-xl shadow p-3">
-        <h1 class="text-xl font-bold">
-            固定資産棚卸しシステム V5
-        </h1>
-    </section>
+        <!-- ヘッダー -->
+        <section class="bg-white rounded-xl shadow p-3">
+            <h1 class="text-xl font-bold">
+                固定資産棚卸しシステム V5
+            </h1>
+        </section>
 
-    <!-- QR -->
-    <section class="bg-white rounded-xl shadow p-3">
+        <!-- QR -->
+        <section class="bg-white rounded-xl shadow p-3">
 
-        <h2 class="font-bold mb-2">
-            QRコード読取
-        </h2>
+            <h2 class="font-bold mb-2">
+                QRコード読取
+            </h2>
 
-        <div id="qrReader"></div>
+            <div id="qrReader"></div>
 
-        <div class="grid grid-cols-2 gap-2 mt-3">
+            <div class="grid grid-cols-2 gap-2 mt-3">
 
-            <button
-                id="startQrBtn"
-                class="bg-blue-600 text-white rounded p-2"
-            >
-                QR開始
+                <button id="startQrBtn"
+                    class="bg-blue-600 text-white rounded p-2">
+
+                    QR開始
+
+                </button>
+
+                <button id="stopQrBtn"
+                    class="bg-gray-600 text-white rounded p-2">
+
+                    QR停止
+
+                </button>
+
+            </div>
+
+        </section>
+
+        <!-- 資産情報 -->
+        <section class="bg-white rounded-xl shadow p-3">
+
+            <h2 class="font-bold mb-2">
+                資産情報
+            </h2>
+
+            <input id="assetNo"
+                type="text"
+                placeholder="資産番号"
+                class="w-full border rounded p-2">
+
+            <div class="mt-2 text-sm">
+
+                撮影枚数:
+                <span id="assetPhotoCount">0</span>
+
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-3">
+
+                <button id="openCameraBtn"
+                    class="bg-green-600 text-white rounded p-3">
+
+                    写真撮影
+
+                </button>
+
+                <button id="nextAssetBtn"
+                    class="bg-orange-500 text-white rounded p-3">
+
+                    次の資産へ
+
+                </button>
+
+            </div>
+
+        </section>
+
+        <!-- サマリ -->
+        <section class="bg-white rounded-xl shadow p-3">
+
+            <h2 class="font-bold mb-2">
+                棚卸サマリ
+            </h2>
+
+            <div id="summaryArea"></div>
+
+        </section>
+
+        <!-- 履歴 -->
+        <section class="bg-white rounded-xl shadow p-3">
+
+            <h2 class="font-bold mb-2">
+                履歴
+            </h2>
+
+            <div id="timelineArea"
+                class="space-y-1 text-sm">
+
+            </div>
+
+        </section>
+
+        <!-- 写真 -->
+        <section class="bg-white rounded-xl shadow p-3">
+
+            <h2 class="font-bold mb-2">
+                保存済み写真
+            </h2>
+
+            <div id="thumbnailArea"
+                class="grid grid-cols-3 gap-2">
+
+            </div>
+
+        </section>
+
+        <!-- ZIP -->
+        <section>
+
+            <button id="exportZipBtn"
+                class="w-full p-4
+                       bg-indigo-700
+                       text-white
+                       rounded-xl
+                       font-bold">
+
+                棚卸しデータをZIP出力
+
             </button>
 
-            <button
-                id="stopQrBtn"
-                class="bg-gray-600 text-white rounded p-2"
-            >
-                QR停止
-            </button>
+        </section>
 
-        </div>
+    </div>
 
-    </section>
+    <!-- カメラモーダル -->
+    <div id="cameraModal"
+        class="hidden fixed inset-0 bg-black/70 z-50">
 
-    <!-- 資産入力 -->
-    <section class="bg-white rounded-xl shadow p-3">
+        <div class="bg-white p-3 rounded-xl
+                    w-11/12 max-w-lg
+                    mx-auto mt-10">
 
-        <h2 class="font-bold mb-2">
-            資産情報
-        </h2>
+            <h2 class="font-bold mb-2">
 
-        <input
-            id="assetNo"
-            type="text"
-            placeholder="資産番号"
-            class="w-full border rounded p-2"
-        >
-
-        <div class="mt-2 text-sm">
-
-            撮影枚数:
-            <span id="assetPhotoCount">
-                0
-            </span>
-
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 mt-3">
-
-            <button
-                id="openCameraBtn"
-                class="bg-green-600 text-white rounded p-3"
-            >
                 写真撮影
-            </button>
 
-            <button
-                id="nextAssetBtn"
-                class="bg-orange-500 text-white rounded p-3"
-            >
-                次の資産へ
-            </button>
+            </h2>
 
-        </div>
+            <video id="cameraVideo"
+                autoplay
+                playsinline
+                class="w-full rounded">
 
-    </section>
+            </video>
 
-    <!-- サマリ -->
-    <section class="bg-white rounded-xl shadow p-3">
+            <button id="captureBtn"
+                class="w-full
+                       bg-green-600
+                       text-white
+                       p-3
+                       mt-3
+                       rounded">
 
-        <h2 class="font-bold mb-2">
-            棚卸サマリ
-        </h2>
-
-        <div id="summaryArea">
-        </div>
-
-    </section>
-
-    <!-- 履歴 -->
-    <section class="bg-white rounded-xl shadow p-3">
-
-        <h2 class="font-bold mb-2">
-            履歴
-        </h2>
-
-        <div
-            id="timelineArea"
-            class="space-y-1 text-sm"
-        ></div>
-
-    </section>
-
-    <!-- サムネイル -->
-    <section class="bg-white rounded-xl shadow p-3">
-
-        <h2 class="font-bold mb-2">
-            保存済み写真
-        </h2>
-
-        <div
-            id="thumbnailArea"
-            class="grid grid-cols-3 gap-2"
-        ></div>
-
-    </section>
-
-    <!-- ZIP -->
-    <section>
-
-        <button
-            id="exportZipBtn"
-            class="w-full p-4 bg-indigo-700 text-white rounded-xl font-bold"
-        >
-            棚卸しデータをZIP出力
-        </button>
-
-    </section>
-
-</div>
-
-<!-- ===================================== -->
-<!-- 撮影モーダル -->
-<!-- ===================================== -->
-
-<div
-    id="cameraModal"
-    class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
->
-
-    <div class="bg-white p-3 rounded-xl w-11/12">
-
-        <h2 class="font-bold mb-2">
-            写真撮影
-        </h2>
-
-        <video
-            id="cameraVideo"
-            autoplay
-            playsinline
-            class="w-full rounded"
-        ></video>
-
-        <div class="mt-3">
-
-            <button
-                id="captureBtn"
-                class="w-full bg-green-600 text-white p-3 rounded"
-            >
                 撮影
+
             </button>
 
         </div>
 
     </div>
 
-</div>
+    <!-- プレビュー -->
+    <div id="previewModal"
+        class="hidden fixed inset-0
+               bg-black/70 z-50">
 
-<!-- ===================================== -->
-<!-- プレビューモーダル -->
-<!-- ===================================== -->
+        <div class="bg-white
+                    p-3 rounded-xl
+                    w-11/12 max-w-lg
+                    mx-auto mt-10">
 
-<div
-    id="previewModal"
-    class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
->
+            <h2 class="font-bold mb-2">
 
-    <div class="bg-white p-3 rounded-xl w-11/12">
+                撮影結果確認
 
-        <h2 class="font-bold mb-2">
-            撮影結果確認
-        </h2>
+            </h2>
 
-        <img
-            id="previewImage"
-            class="w-full rounded"
-        >
+            <img id="previewImage"
+                class="w-full rounded">
 
-        <div class="grid grid-cols-2 gap-2 mt-3">
+            <div class="grid grid-cols-2 gap-2 mt-3">
 
-            <button
-                id="saveBtn"
-                class="bg-blue-600 text-white p-3 rounded"
-            >
-                保存
-            </button>
+                <button id="saveBtn"
+                    class="bg-blue-600
+                           text-white
+                           p-3
+                           rounded">
 
-            <button
-                id="retakeBtn"
-                class="bg-orange-500 text-white p-3 rounded"
-            >
-                撮り直し
-            </button>
+                    保存
+
+                </button>
+
+                <button id="retakeBtn"
+                    class="bg-orange-500
+                           text-white
+                           p-3
+                           rounded">
+
+                    撮り直し
+
+                </button>
+
+            </div>
 
         </div>
 
     </div>
 
-</div>
-
-app.js
+    "></script>
 
 </body>
+
 </html>
+`
