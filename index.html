@@ -407,6 +407,37 @@ const STORE_NAME = 'records';
   });
 
 }
+    async function deleteRecordFromDB(id) {
+
+  return new Promise(
+    (resolve,reject)=>{
+
+      const tx =
+        db.transaction(
+          STORE_NAME,
+          'readwrite'
+        );
+
+      const store =
+        tx.objectStore(
+          STORE_NAME
+        );
+
+      const req =
+        store.delete(id);
+
+      req.onsuccess =
+        ()=>resolve();
+
+      req.onerror =
+        ()=>reject(
+          req.error
+        );
+
+    }
+  );
+
+}
     async function restoreData() {
 
   return new Promise((resolve, reject) => {
@@ -436,24 +467,30 @@ const STORE_NAME = 'records';
 
       result.forEach(item => {
 
-        inventoryRecords.push(
-          item.record
-        );
+  const record =
+    item.record;
 
-        imageStore.push(
-          item.image
-        );
+  record._dbId =
+    item.id;
 
-        assetCounters[
-          item.record.assetNo
-        ] = Math.max(
-          assetCounters[
-            item.record.assetNo
-          ] || 0,
-          item.record.seq
-        );
+  inventoryRecords.push(
+    record
+  );
 
-      });
+  imageStore.push(
+    item.image
+  );
+
+  assetCounters[
+    record.assetNo
+  ] = Math.max(
+    assetCounters[
+      record.assetNo
+    ] || 0,
+    record.seq
+  );
+
+});
 
       resolve();
 
@@ -1103,7 +1140,7 @@ document
 
 }
     window.deleteRecord =
-function(index){
+async function(index){
 
   const ok =
     confirm(
@@ -1115,7 +1152,25 @@ function(index){
   }
 
   const actualIndex =
-    inventoryRecords.length - 1 - index;
+    inventoryRecords.length -
+    1 -
+    index;
+
+  const target =
+    inventoryRecords[
+      actualIndex
+    ];
+
+  if(
+    target &&
+    target._dbId
+  ){
+
+    await deleteRecordFromDB(
+      target._dbId
+    );
+
+  }
 
   inventoryRecords.splice(
     actualIndex,
@@ -1130,7 +1185,6 @@ function(index){
   updateUi();
 
 };
-
     function setCameraStatus(running) {
       if (running) {
         els.cameraStatus.textContent = '起動中';
