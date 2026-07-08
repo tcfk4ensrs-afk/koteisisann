@@ -504,6 +504,123 @@ async function openCaptureScreen() {
     );
 
 }
+    async function captureFromModal() {
+
+  const video =
+    document.getElementById(
+      'captureVideo'
+    );
+
+  if (
+    !video ||
+    video.readyState < 2
+  ) {
+
+    showMessage(
+      'camera not ready',
+      'error'
+    );
+
+    return;
+
+  }
+
+  const canvas =
+    document.createElement(
+      'canvas'
+    );
+
+  canvas.width =
+    video.videoWidth;
+
+  canvas.height =
+    video.videoHeight;
+
+  const ctx =
+    canvas.getContext(
+      '2d'
+    );
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const blob =
+    await canvasToBlob(
+      canvas,
+      'image/jpeg',
+      0.9
+    );
+
+  const assetNo =
+    els.assetNo.value.trim();
+
+  const seq =
+    (assetCounters[
+      assetNo
+    ] || 0) + 1;
+
+  assetCounters[
+    assetNo
+  ] = seq;
+
+  const fileName =
+    `${assetNo}_${seq}.jpg`;
+
+  const datetime =
+    formatDateTime(
+      new Date()
+    );
+
+  imageStore.push({
+    assetNo,
+    seq,
+    fileName,
+    blob,
+    datetime
+  });
+
+  inventoryRecords.push({
+    assetNo,
+    seq,
+    fileName,
+    datetime
+  });
+
+  await saveRecordToDB({
+
+    record:{
+      assetNo,
+      seq,
+      fileName,
+      datetime
+    },
+
+    image:{
+      assetNo,
+      seq,
+      fileName,
+      blob,
+      datetime
+    }
+
+  });
+
+  closeCaptureScreen();
+
+  updateUi();
+
+  showMessage(
+    fileName +
+    ' saved',
+    'success'
+  );
+
+}
     function bindEvents() {
       els.startCameraBtn.addEventListener('click', startCamera);
       els.stopCameraBtn.addEventListener('click', stopCamera);
@@ -522,6 +639,14 @@ async function openCaptureScreen() {
   .addEventListener(
     'click',
     closeCaptureScreen
+  );
+      document
+  .getElementById(
+    'shutterBtn'
+  )
+  .addEventListener(
+    'click',
+    captureFromModal
   );
     }
 
