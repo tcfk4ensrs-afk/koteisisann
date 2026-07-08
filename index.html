@@ -159,7 +159,67 @@
       >
         Asset
       </div>
+<!-- Preview Modal -->
 
+<div
+  id="previewModal"
+  class="hidden fixed inset-0 bg-black z-50"
+>
+
+  <div
+    class="h-full flex flex-col"
+  >
+
+    <div
+      class="flex-1 flex items-center justify-center"
+    >
+
+      <img
+        id="previewImage"
+        class="
+          max-w-full
+          max-h-full
+          object-contain
+        "
+      >
+
+    </div>
+
+    <div
+      class="grid grid-cols-2 gap-3 p-5"
+    >
+
+      <button
+        id="retakeBtn"
+        class="
+          bg-orange-500
+          text-white
+          py-4
+          rounded
+          font-bold
+        "
+      >
+        Retake
+      </button>
+
+      <button
+        id="saveBtn"
+        class="
+          bg-green-600
+          text-white
+          py-4
+          rounded
+          font-bold
+        "
+      >
+        Save
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
       <button
         id="closeCaptureBtn"
         class="
@@ -226,6 +286,8 @@
     let html5QrCode = null;
     let isCameraRunning = false;
     let captureStream = null;
+    let previewBlob = null;
+let previewAssetNo = '';
 
     // 棚卸しデータはブラウザメモリ上のみ保持する
     let inventoryRecords = []; // { assetNo, seq, fileName, datetime }
@@ -480,50 +542,12 @@ async function openCaptureScreen() {
   }
 
 }
-    function closeCaptureScreen() {
-
-  if (captureStream) {
-
-    captureStream
-      .getTracks()
-      .forEach(track =>
-        track.stop()
-      );
-
-    captureStream = null;
-
-  }
-
-  document
-    .getElementById(
-      'captureModal'
-    )
-    .classList
-    .add(
-      'hidden'
-    );
-
-}
     async function captureFromModal() {
 
   const video =
     document.getElementById(
       'captureVideo'
     );
-
-  if (
-    !video ||
-    video.readyState < 2
-  ) {
-
-    showMessage(
-      'camera not ready',
-      'error'
-    );
-
-    return;
-
-  }
 
   const canvas =
     document.createElement(
@@ -549,15 +573,44 @@ async function openCaptureScreen() {
     canvas.height
   );
 
-  const blob =
+  previewBlob =
     await canvasToBlob(
       canvas,
       'image/jpeg',
       0.9
     );
 
-  const assetNo =
+  previewAssetNo =
     els.assetNo.value.trim();
+
+  const imageUrl =
+    URL.createObjectURL(
+      previewBlob
+    );
+
+  document
+    .getElementById(
+      'previewImage'
+    )
+    .src =
+    imageUrl;
+
+  closeCaptureScreen();
+
+  document
+    .getElementById(
+      'previewModal'
+    )
+    .classList
+    .remove(
+      'hidden'
+    );
+
+}
+    async function savePreviewPhoto() {
+
+  const assetNo =
+    previewAssetNo;
 
   const seq =
     (assetCounters[
@@ -580,7 +633,7 @@ async function openCaptureScreen() {
     assetNo,
     seq,
     fileName,
-    blob,
+    blob: previewBlob,
     datetime
   });
 
@@ -604,13 +657,20 @@ async function openCaptureScreen() {
       assetNo,
       seq,
       fileName,
-      blob,
+      blob: previewBlob,
       datetime
     }
 
   });
 
-  closeCaptureScreen();
+  document
+    .getElementById(
+      'previewModal'
+    )
+    .classList
+    .add(
+      'hidden'
+    );
 
   updateUi();
 
@@ -619,6 +679,20 @@ async function openCaptureScreen() {
     ' saved',
     'success'
   );
+
+}
+    function retakePreview() {
+
+  document
+    .getElementById(
+      'previewModal'
+    )
+    .classList
+    .add(
+      'hidden'
+    );
+
+  openCaptureScreen();
 
 }
     function bindEvents() {
@@ -647,6 +721,23 @@ async function openCaptureScreen() {
   .addEventListener(
     'click',
     captureFromModal
+  );
+      document
+  .getElementById(
+    'saveBtn'
+  )
+  .addEventListener(
+    'click',
+    savePreviewPhoto
+  );
+
+document
+  .getElementById(
+    'retakeBtn'
+  )
+  .addEventListener(
+    'click',
+    retakePreview
   );
     }
 
