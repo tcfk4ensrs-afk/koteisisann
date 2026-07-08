@@ -139,7 +139,7 @@
         </button>
       </section>
     </main>
-    <!-- Capture Screen -->
+   <!-- Capture Screen -->
 
 <div
   id="captureModal"
@@ -149,8 +149,7 @@
   <div class="h-full flex flex-col">
 
     <div
-      class="flex items-center justify-between
-             text-white p-3"
+      class="flex items-center justify-between text-white p-3"
     >
 
       <div
@@ -159,7 +158,51 @@
       >
         Asset
       </div>
-<!-- Preview Modal -->
+
+      <button
+        id="closeCaptureBtn"
+        class="bg-red-600 px-3 py-2 rounded"
+      >
+        Close
+      </button>
+
+    </div>
+
+    <div
+      class="flex-1 flex items-center justify-center"
+    >
+
+      <video
+        id="captureVideo"
+        autoplay
+        playsinline
+        class="w-full h-full object-contain"
+      ></video>
+
+    </div>
+
+    <div class="p-5">
+
+      <button
+        id="shutterBtn"
+        class="
+          w-24
+          h-24
+          rounded-full
+          bg-white
+          border-8
+          border-slate-300
+          mx-auto
+          block
+        "
+      ></button>
+
+    </div>
+
+  </div>
+
+</div>
+   <!-- Preview Modal -->
 
 <div
   id="previewModal"
@@ -220,63 +263,6 @@
   </div>
 
 </div>
-      <button
-        id="closeCaptureBtn"
-        class="
-          bg-red-600
-          px-3 py-2
-          rounded
-        "
-      >
-        Close
-      </button>
-
-    </div>
-
-    <div
-      class="
-        flex-1
-        flex
-        items-center
-        justify-center
-      "
-    >
-
-      <video
-        id="captureVideo"
-        autoplay
-        playsinline
-        class="
-          w-full
-          h-full
-          object-contain
-        "
-      ></video>
-
-    </div>
-
-    <div class="p-5">
-
-      <button
-        id="shutterBtn"
-        class="
-          w-24
-          h-24
-          rounded-full
-          bg-white
-          border-8
-          border-slate-300
-          mx-auto
-          block
-        "
-      ></button>
-
-    </div>
-
-  </div>
-
-</div>
-  </div>
 
   <script>
     // ==========================================
@@ -543,7 +529,7 @@ async function openCaptureScreen() {
 
 }
     async function captureFromModal() {
-
+alert("capture");
   const video =
     document.getElementById(
       'captureVideo'
