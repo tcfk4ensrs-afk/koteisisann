@@ -438,6 +438,37 @@ const STORE_NAME = 'records';
   );
 
 }
+    async function clearAllDB() {
+
+  return new Promise(
+    (resolve,reject)=>{
+
+      const tx =
+        db.transaction(
+          STORE_NAME,
+          'readwrite'
+        );
+
+      const store =
+        tx.objectStore(
+          STORE_NAME
+        );
+
+      const req =
+        store.clear();
+
+      req.onsuccess =
+        ()=>resolve();
+
+      req.onerror =
+        ()=>reject(
+          req.error
+        );
+
+    }
+  );
+
+}
     async function restoreData() {
 
   return new Promise((resolve, reject) => {
@@ -1012,22 +1043,47 @@ document
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    function resetAllData() {
-      if (inventoryRecords.length === 0 && imageStore.length === 0) {
-        showMessage('リセット対象データはありません。', 'info');
-        return;
-      }
+    async function resetAllData() {
 
-      const ok = confirm('メモリ内の棚卸し実績と写真データをすべて削除します。よろしいですか？');
-      if (!ok) return;
+  if (
+    inventoryRecords.length === 0 &&
+    imageStore.length === 0
+  ) {
 
-      inventoryRecords = [];
-      imageStore = [];
-      assetCounters = {};
-      els.assetNo.value = '';
-      updateUi();
-      showMessage('全データをリセットしました。', 'info');
-    }
+    showMessage(
+      'No data',
+      'info'
+    );
+
+    return;
+
+  }
+
+  const ok =
+    confirm(
+      '全データを削除しますか？'
+    );
+
+  if (!ok) {
+    return;
+  }
+
+  inventoryRecords = [];
+  imageStore = [];
+  assetCounters = {};
+
+  await clearAllDB();
+
+  els.assetNo.value = '';
+
+  updateUi();
+
+  showMessage(
+    '全データを削除しました',
+    'success'
+  );
+
+}
 
     function updateUi() {
       updateCurrentAssetCount();
