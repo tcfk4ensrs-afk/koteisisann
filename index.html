@@ -25,6 +25,24 @@
     #reader__scan_region img { display: none; }
     #reader__dashboard_section { display: none !important; }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    #captureModal video {
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+}
+
+@media (orientation: landscape) {
+
+  #captureModal video {
+
+    object-fit: contain;
+
+  }
+
+}
   </style>
 </head>
 
@@ -121,6 +139,83 @@
         </button>
       </section>
     </main>
+    <!-- Capture Screen -->
+
+<div
+  id="captureModal"
+  class="hidden fixed inset-0 bg-black z-50"
+>
+
+  <div class="h-full flex flex-col">
+
+    <div
+      class="flex items-center justify-between
+             text-white p-3"
+    >
+
+      <div
+        id="captureAssetLabel"
+        class="font-bold"
+      >
+        Asset
+      </div>
+
+      <button
+        id="closeCaptureBtn"
+        class="
+          bg-red-600
+          px-3 py-2
+          rounded
+        "
+      >
+        Close
+      </button>
+
+    </div>
+
+    <div
+      class="
+        flex-1
+        flex
+        items-center
+        justify-center
+      "
+    >
+
+      <video
+        id="captureVideo"
+        autoplay
+        playsinline
+        class="
+          w-full
+          h-full
+          object-contain
+        "
+      ></video>
+
+    </div>
+
+    <div class="p-5">
+
+      <button
+        id="shutterBtn"
+        class="
+          w-24
+          h-24
+          rounded-full
+          bg-white
+          border-8
+          border-slate-300
+          mx-auto
+          block
+        "
+      ></button>
+
+    </div>
+
+  </div>
+
+</div>
   </div>
 
   <script>
@@ -130,6 +225,7 @@
 
     let html5QrCode = null;
     let isCameraRunning = false;
+    let captureStream = null;
 
     // 棚卸しデータはブラウザメモリ上のみ保持する
     let inventoryRecords = []; // { assetNo, seq, fileName, datetime }
@@ -321,15 +417,112 @@ const STORE_NAME = 'records';
   });
 
 }
+async function openCaptureScreen() {
 
+  const assetNo =
+    els.assetNo.value.trim();
+
+  if (!assetNo) {
+
+    showMessage(
+      '資産番号を入力してください',
+      'error'
+    );
+
+    return;
+  }
+
+  document
+    .getElementById(
+      'captureAssetLabel'
+    )
+    .textContent =
+    assetNo;
+
+  document
+    .getElementById(
+      'captureModal'
+    )
+    .classList
+    .remove(
+      'hidden'
+    );
+
+  try {
+
+    captureStream =
+      await navigator
+        .mediaDevices
+        .getUserMedia({
+          video: {
+            facingMode:
+              'environment'
+          }
+        });
+
+    document
+      .getElementById(
+        'captureVideo'
+      )
+      .srcObject =
+      captureStream;
+
+  }
+  catch(err){
+
+    console.error(err);
+
+    showMessage(
+      'カメラ起動失敗',
+      'error'
+    );
+
+  }
+
+}
+    function closeCaptureScreen() {
+
+  if (captureStream) {
+
+    captureStream
+      .getTracks()
+      .forEach(track =>
+        track.stop()
+      );
+
+    captureStream = null;
+
+  }
+
+  document
+    .getElementById(
+      'captureModal'
+    )
+    .classList
+    .add(
+      'hidden'
+    );
+
+}
     function bindEvents() {
       els.startCameraBtn.addEventListener('click', startCamera);
       els.stopCameraBtn.addEventListener('click', stopCamera);
-      els.captureBtn.addEventListener('click', capturePhoto);
+      eels.captureBtn.addEventListener(
+  'click',
+  openCaptureScreen
+);
       els.nextAssetBtn.addEventListener('click', nextAsset);
       els.exportZipBtn.addEventListener('click', exportZip);
       els.resetBtn.addEventListener('click', resetAllData);
       els.assetNo.addEventListener('input', updateCurrentAssetCount);
+      document
+  .getElementById(
+    'closeCaptureBtn'
+  )
+  .addEventListener(
+    'click',
+    closeCaptureScreen
+  );
     }
 
     async function startCamera() {
